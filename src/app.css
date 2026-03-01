@@ -12,11 +12,14 @@
   --color-text:      #e2e8f0;
   --color-text-dim:  #94a3b8;
 
-  /* Per-app accent colours */
-  --color-ccs:     #6366f1;   /* indigo */
-  --color-forge:   #f0a500;   /* amber */
-  --color-wallet:  #10b981;   /* emerald */
-  --color-home:    #06b6d4;   /* cyan */
+  /* Per-project accent colours */
+  --color-ccs:        #6366f1;   /* indigo   — Claude Code Sidekick */
+  --color-forge:      #f0a500;   /* amber    — Forge / Zebra Skimmers */
+  --color-wallet:     #10b981;   /* emerald  — WalletWatch */
+  --color-athena:     #f472b6;   /* pink     — Athena DeFi */
+  --color-northcoast: #38bdf8;   /* sky blue — NorthCoast AI */
+  --color-infra:      #a78bfa;   /* violet   — Home Infra */
+  --color-home:       #06b6d4;   /* cyan     — (legacy alias) */
 
   --font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
   --radius: 4px;

@@ -1,54 +1,23 @@
 <script lang="ts">
-	import { connectedCount } from '$lib/stores/projects';
+	import type { PageData } from './$types';
 	import { formatRelative } from '$lib/utils';
 
-	// Placeholder data — will be replaced by live agent fetches
-	const summary = {
-		projects: 2,
-		connected: 1,
-		activeTasks: 7,
-		openIssues: 3,
-	};
+	let { data }: { data: PageData } = $props();
 
+	const activeProjects = data.projects.filter(p => p.status !== 'archived');
+	const activeCount = activeProjects.filter(p => p.status === 'active').length;
+
+	// Activity feed stays local for now — will be sourced from agent websockets
 	const activity = [
-		{ project: 'CCS', color: 'var(--color-ccs)',   event: 'Phase 2 complete — awaiting approval', time: new Date(Date.now() - 12 * 60000).toISOString() },
-		{ project: 'Forge', color: 'var(--color-forge)', event: 'Invoice list component merged', time: new Date(Date.now() - 3 * 3600000).toISOString() },
-		{ project: 'CCS', color: 'var(--color-ccs)',   event: 'Multi-model review finished (4 files)', time: new Date(Date.now() - 5 * 3600000).toISOString() },
-		{ project: 'WalletWatch', color: 'var(--color-wallet)', event: 'Dust filter threshold updated', time: new Date(Date.now() - 86400000).toISOString() },
+		{ project: 'CCS',         color: 'var(--color-ccs)',       event: 'Phase 2 complete — awaiting approval', time: new Date(Date.now() - 12 * 60000).toISOString() },
+		{ project: 'Forge',       color: 'var(--color-forge)',     event: 'Invoice list component merged',        time: new Date(Date.now() - 3 * 3600000).toISOString() },
+		{ project: 'Athena',      color: 'var(--color-athena)',    event: 'Signal engine deployed to DO',         time: new Date(Date.now() - 6 * 3600000).toISOString() },
+		{ project: 'WalletWatch', color: 'var(--color-wallet)',    event: 'Dust filter threshold updated',        time: new Date(Date.now() - 86400000).toISOString() },
 	];
 
-	const projects = [
-		{
-			id: 'ccs',
-			label: 'Claude Code Sidekick',
-			accent: 'var(--color-ccs)',
-			href: '/ccs',
-			status: 'active',
-			phase: 'Phase 2 / 5',
-			progress: 40,
-			tasks: { done: 8, total: 20 },
-		},
-		{
-			id: 'forge',
-			label: 'Forge',
-			accent: 'var(--color-forge)',
-			href: '/forge',
-			status: 'active',
-			phase: 'Invoice module',
-			progress: 70,
-			tasks: { done: 14, total: 20 },
-		},
-		{
-			id: 'walletwatch',
-			label: 'WalletWatch',
-			accent: 'var(--color-wallet)',
-			href: '/walletwatch',
-			status: 'idle',
-			phase: 'Deployed',
-			progress: 100,
-			tasks: { done: 20, total: 20 },
-		},
-	];
+	const kindIcon: Record<string, string> = {
+		ccs: '◈', shopify: '◆', defi: '◉', ai: '◎', infra: '⬡', forge: '◆', generic: '○',
+	};
 </script>
 
 <div class="page">
@@ -58,27 +27,27 @@
 			<p class="page-sub">All projects at a glance</p>
 		</div>
 		<div class="header-meta">
-			<span class="badge badge-active">{summary.connected} agent online</span>
+			<span class="badge badge-active">{activeCount} active</span>
 		</div>
 	</header>
 
 	<!-- Stat row -->
 	<div class="stat-row">
 		<div class="stat-card">
-			<div class="label">Projects</div>
-			<div class="value">{summary.projects}</div>
+			<div class="label">Total Projects</div>
+			<div class="value">{activeProjects.length}</div>
 		</div>
 		<div class="stat-card">
-			<div class="label">Active Tasks</div>
-			<div class="value">{summary.activeTasks}</div>
+			<div class="label">Active</div>
+			<div class="value">{activeCount}</div>
 		</div>
 		<div class="stat-card">
-			<div class="label">Open Issues</div>
-			<div class="value" style="color: #f87171">{summary.openIssues}</div>
+			<div class="label">Clients</div>
+			<div class="value">{[...new Set(activeProjects.map(p => p.client).filter(Boolean))].length}</div>
 		</div>
 		<div class="stat-card">
-			<div class="label">Agents Connected</div>
-			<div class="value" style="color: #10b981">{summary.connected}</div>
+			<div class="label">Integrations</div>
+			<div class="value">{activeProjects.filter(p => p.asana || p.shopify).length}</div>
 		</div>
 	</div>
 
@@ -86,18 +55,28 @@
 	<section class="section">
 		<h2 class="section-title">Projects</h2>
 		<div class="project-grid">
-			{#each projects as p}
-				<a href={p.href} class="project-card" style="--accent: {p.accent}">
+			{#each activeProjects as p}
+				<a href="/projects/{p.id}" class="project-card" style="--accent: var({p.accent})">
 					<div class="project-card-top">
-						<div class="project-name">{p.label}</div>
+						<div class="project-name">
+							<span class="kind-icon">{kindIcon[p.kind] ?? '○'}</span>
+							{p.name}
+						</div>
 						<span class="badge badge-{p.status}">{p.status}</span>
 					</div>
-					<div class="project-phase dim">{p.phase}</div>
-					<div class="progress-track" style="margin-top: 1rem">
-						<div class="progress-fill" style="width: {p.progress}%; background: {p.accent}"></div>
-					</div>
-					<div class="project-tasks dim">
-						{p.tasks.done} / {p.tasks.total} tasks
+
+					{#if p.description}
+						<div class="project-desc dim">{p.description}</div>
+					{/if}
+
+					{#if p.client}
+						<div class="project-client dim">↳ {p.client}</div>
+					{/if}
+
+					<div class="project-tags">
+						{#if p.asana}<span class="tag">Asana</span>{/if}
+						{#if p.shopify}<span class="tag">Shopify</span>{/if}
+						{#if p.agent}<span class="tag">Agent</span>{/if}
 					</div>
 				</a>
 			{/each}
@@ -167,7 +146,7 @@
 		margin: 0 0 1rem;
 	}
 
-	/* Project cards */
+	/* ── Project grid ────────────────────────────────────────── */
 	.project-grid {
 		display: grid;
 		grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -178,10 +157,10 @@
 		display: block;
 		background: var(--color-surface);
 		border: 1px solid var(--color-border);
+		border-left: 3px solid var(--accent);
 		border-radius: var(--radius-lg);
 		padding: 1.25rem 1.5rem;
 		transition: border-color 0.2s, background 0.2s;
-		border-left: 3px solid var(--accent);
 	}
 
 	.project-card:hover {
@@ -193,26 +172,52 @@
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		margin-bottom: 0.35rem;
+		margin-bottom: 0.5rem;
 	}
 
 	.project-name {
 		font-weight: 600;
 		font-size: 0.95rem;
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
 	}
 
-	.project-phase {
+	.kind-icon {
+		color: var(--accent);
+		font-size: 0.85rem;
+	}
+
+	.project-desc {
 		font-size: 0.8rem;
-		margin-top: 0.2rem;
+		margin-bottom: 0.4rem;
+		line-height: 1.4;
 	}
 
-	.project-tasks {
+	.project-client {
 		font-size: 0.75rem;
-		margin-top: 0.5rem;
-		font-family: var(--font-mono);
+		margin-bottom: 0.75rem;
 	}
 
-	/* Feed */
+	.project-tags {
+		display: flex;
+		gap: 0.4rem;
+		flex-wrap: wrap;
+		margin-top: 0.75rem;
+	}
+
+	.tag {
+		font-size: 0.68rem;
+		font-weight: 600;
+		letter-spacing: 0.05em;
+		background: color-mix(in srgb, var(--accent) 10%, transparent);
+		color: var(--accent);
+		border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+		border-radius: 3px;
+		padding: 0.15rem 0.45rem;
+	}
+
+	/* ── Feed ────────────────────────────────────────────────── */
 	.feed {
 		background: var(--color-surface);
 		border: 1px solid var(--color-border);
@@ -252,4 +257,6 @@
 		font-family: var(--font-mono);
 		flex-shrink: 0;
 	}
+
+	.dim { color: var(--color-muted); }
 </style>

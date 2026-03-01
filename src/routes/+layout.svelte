@@ -1,15 +1,21 @@
 <script lang="ts">
 	import '../app.css';
 	import { page } from '$app/stores';
+	import { getActiveProjects } from '$lib/config/projects';
 
 	let { children } = $props();
 
-	const nav = [
-		{ href: '/',            label: 'Overview',    icon: '⬡' },
-		{ href: '/ccs',         label: 'CCS',         icon: '◈', accent: 'ccs' },
-		{ href: '/forge',       label: 'Forge',       icon: '◆', accent: 'forge' },
-		{ href: '/walletwatch', label: 'WalletWatch', icon: '◉', accent: 'wallet' },
-	];
+	const projects = getActiveProjects();
+
+	const kindIcon: Record<string, string> = {
+		ccs:     '◈',
+		shopify: '◆',
+		forge:   '◆',
+		defi:    '◉',
+		ai:      '◎',
+		infra:   '⬡',
+		generic: '○',
+	};
 
 	function isActive(href: string, pathname: string) {
 		if (href === '/') return pathname === '/';
@@ -25,21 +31,41 @@
 		</div>
 
 		<nav class="sidebar-nav">
-			{#each nav as item}
+			<!-- Top-level overview -->
+			<a
+				href="/"
+				class="nav-item"
+				class:active={isActive('/', $page.url.pathname)}
+			>
+				<span class="nav-icon">⬡</span>
+				<span class="nav-label">Overview</span>
+			</a>
+
+			<div class="nav-section-label">Projects</div>
+
+			<!-- Dynamic project list from manifest -->
+			{#each projects as project}
 				<a
-					href={item.href}
+					href="/projects/{project.id}"
 					class="nav-item"
-					class:active={isActive(item.href, $page.url.pathname)}
-					style={item.accent ? `--item-accent: var(--color-${item.accent})` : ''}
+					class:active={isActive(`/projects/${project.id}`, $page.url.pathname)}
+					style="--item-accent: var({project.accent})"
 				>
-					<span class="nav-icon">{item.icon}</span>
-					<span class="nav-label">{item.label}</span>
+					<span class="nav-icon">{kindIcon[project.kind] ?? '○'}</span>
+					<span class="nav-label">{project.name}</span>
+					{#if project.status === 'active'}
+						<span class="nav-status" aria-label="active"></span>
+					{/if}
 				</a>
 			{/each}
 		</nav>
 
 		<div class="sidebar-footer">
-			<a href="/settings" class="nav-item">
+			<a
+				href="/settings"
+				class="nav-item"
+				class:active={isActive('/settings', $page.url.pathname)}
+			>
 				<span class="nav-icon">⚙</span>
 				<span class="nav-label">Settings</span>
 			</a>
@@ -76,6 +102,7 @@
 		gap: 0.6rem;
 		padding: 1.25rem 1rem;
 		border-bottom: 1px solid var(--color-border);
+		flex-shrink: 0;
 	}
 
 	.brand-mark {
@@ -97,21 +124,32 @@
 		display: flex;
 		flex-direction: column;
 		gap: 2px;
+		overflow-y: auto;
+	}
+
+	.nav-section-label {
+		font-size: 0.65rem;
+		font-weight: 600;
+		text-transform: uppercase;
+		letter-spacing: 0.12em;
+		color: var(--color-muted);
+		padding: 0.75rem 0.75rem 0.3rem;
 	}
 
 	.sidebar-footer {
 		padding: 0.5rem;
 		border-top: 1px solid var(--color-border);
+		flex-shrink: 0;
 	}
 
 	.nav-item {
 		display: flex;
 		align-items: center;
 		gap: 0.65rem;
-		padding: 0.55rem 0.75rem;
+		padding: 0.5rem 0.75rem;
 		border-radius: var(--radius);
 		color: var(--color-text-dim);
-		font-size: 0.875rem;
+		font-size: 0.825rem;
 		transition: background 0.15s, color 0.15s;
 		--item-accent: var(--color-accent);
 	}
@@ -127,13 +165,27 @@
 	}
 
 	.nav-icon {
-		font-size: 1rem;
-		width: 1.25rem;
+		font-size: 0.9rem;
+		width: 1.1rem;
 		text-align: center;
 		flex-shrink: 0;
 	}
 
-	.nav-label { font-weight: 500; }
+	.nav-label {
+		font-weight: 500;
+		flex: 1;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.nav-status {
+		width: 6px;
+		height: 6px;
+		border-radius: 50%;
+		background: #10b981;
+		flex-shrink: 0;
+	}
 
 	/* ── Main ────────────────────────────────────────────────── */
 	.main {
