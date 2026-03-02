@@ -36,6 +36,7 @@ export interface ProjectManifest {
   asana?: AsanaConfig;
   shopify?: ShopifyConfig;
   agent?: AgentConfig;
+  chatUrl?: string;  // URL of the CCS chat window for this project
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -54,6 +55,7 @@ export const projectManifest: ProjectManifest[] = [
     accent: '--color-ccs',
     repo: 'https://github.com/dylanburkey/claude-code-sidekick',
     agent: { url: 'http://macbook.tail.ts.net:4242' },
+    chatUrl: 'https://ccs-chat.pages.dev/projects/ccs/chat',
     asana: {
       workspaceId: '$ASANA_WORKSPACE_ID',
       projectId: '$ASANA_PROJECT_CCS',

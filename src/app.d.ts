@@ -6,7 +6,20 @@ declare global {
 		// interface Locals {}
 		// interface PageData {}
 		// interface PageState {}
-		// interface Platform {}
+		interface Platform {
+			env: {
+				AI: {
+					run(model: string, options: {
+						messages: Array<{ role: string; content: string }>;
+						max_tokens?: number;
+						temperature?: number;
+					}): Promise<{ response: string }>;
+				};
+				// Add other bindings here as needed (KV, R2, D1…)
+			};
+			context: ExecutionContext;
+			caches: CacheStorage & { default: Cache };
+		}
 	}
 }
 

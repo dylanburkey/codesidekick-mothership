@@ -43,6 +43,16 @@
 
 			<div class="nav-section-label">Projects</div>
 
+			<!-- New project shortcut -->
+			<a
+				href="/projects/new"
+				class="nav-item nav-item--new"
+				class:active={isActive('/projects/new', $page.url.pathname)}
+			>
+				<span class="nav-icon">＋</span>
+				<span class="nav-label">New Project</span>
+			</a>
+
 			<!-- Dynamic project list from manifest -->
 			{#each projects as project}
 				<a
@@ -57,6 +67,20 @@
 						<span class="nav-status" aria-label="active"></span>
 					{/if}
 				</a>
+				{#if project.chatUrl}
+					<a
+						href={project.chatUrl}
+						target="_blank"
+						rel="noopener noreferrer"
+						class="nav-item nav-item--chat"
+						style="--item-accent: var({project.accent})"
+						aria-label="Open AI chat for {project.name}"
+					>
+						<span class="nav-icon" aria-hidden="true">◇</span>
+						<span class="nav-label">AI Chat</span>
+						<span class="nav-external" aria-hidden="true">↗</span>
+					</a>
+				{/if}
 			{/each}
 		</nav>
 
@@ -191,5 +215,43 @@
 	.main {
 		background: var(--color-bg);
 		overflow-y: auto;
+	}
+
+	.nav-item--new {
+		border: 1px dashed var(--color-border, #334155);
+		border-radius: 6px;
+		margin-bottom: .25rem;
+		opacity: .7;
+		transition: opacity .15s, border-color .15s;
+	}
+
+	.nav-item--new:hover,
+	.nav-item--new.active {
+		opacity: 1;
+		border-color: var(--color-ccs, #6366f1);
+	}
+
+	.nav-item--chat {
+		margin-top: -2px;
+		margin-left: 1.5rem;
+		padding-top: 0.35rem;
+		padding-bottom: 0.35rem;
+		font-size: 0.75rem;
+		color: var(--color-muted);
+		opacity: 0.75;
+		transition: opacity 0.15s, color 0.15s;
+	}
+
+	.nav-item--chat:hover {
+		background: color-mix(in srgb, var(--item-accent) 8%, transparent);
+		color: var(--item-accent);
+		opacity: 1;
+	}
+
+	.nav-external {
+		font-size: 0.65rem;
+		margin-left: auto;
+		color: inherit;
+		opacity: 0.6;
 	}
 </style>
