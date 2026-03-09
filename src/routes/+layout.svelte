@@ -27,7 +27,7 @@
 	<aside class="sidebar">
 		<div class="sidebar-brand">
 			<span class="brand-mark">⬡</span>
-			<span class="brand-name">codesidekick</span>
+			<span class="brand-name">PM Arigato</span>
 		</div>
 
 		<nav class="sidebar-nav">

@@ -1,7 +1,12 @@
-name = "codesidekick-mothership"
+name = "pm-arigato"
 compatibility_date = "2025-01-01"
 compatibility_flags = ["nodejs_compat"]
 pages_build_output_dir = ".svelte-kit/cloudflare"
 
 [ai]
 binding = "AI"
+
+[[kv_namespaces]]
+binding = "KV_INVOICES"
+id = "REPLACE_WITH_KV_NAMESPACE_ID"
+preview_id = "REPLACE_WITH_KV_PREVIEW_ID"

@@ -38,7 +38,8 @@
   $: slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 
   // Task grouping
-  $: tasksBySection = (form?.tasks ?? []).reduce<Record<string, typeof form.tasks>>((acc, t) => {
+  type TaskItem = { name: string; section?: string; priority: string; notes: string };
+  $: tasksBySection = (form?.tasks ?? []).reduce<Record<string, TaskItem[]>>((acc, t) => {
     const s = t.section ?? 'Other';
     (acc[s] ??= []).push(t);
     return acc;
@@ -182,10 +183,10 @@
   {:else if form?.error}
     <div class="intake__error">
       <strong>Error:</strong> {form.error}
-      {#if form.raw}
+      {#if (form as Record<string, unknown>).raw}
         <details>
           <summary>Raw AI output</summary>
-          <pre>{form.raw}</pre>
+          <pre>{(form as Record<string, unknown>).raw}</pre>
         </details>
       {/if}
     </div>
