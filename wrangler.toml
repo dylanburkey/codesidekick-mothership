@@ -8,5 +8,5 @@ binding = "AI"
 
 [[kv_namespaces]]
 binding = "KV_INVOICES"
-id = "REPLACE_WITH_KV_NAMESPACE_ID"
-preview_id = "REPLACE_WITH_KV_PREVIEW_ID"
+id = "1a257a6ae93f4954b291486f28e54854"
+preview_id = "0dd248aa76ec4729927f5c84ae59ab1b"
