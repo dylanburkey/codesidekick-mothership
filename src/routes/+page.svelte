@@ -4,8 +4,8 @@
 
 	let { data }: { data: PageData } = $props();
 
-	const activeProjects = data.projects.filter(p => p.status !== 'archived');
-	const activeCount = activeProjects.filter(p => p.status === 'active').length;
+	const activeProjects = $derived(data.projects.filter(p => p.status !== 'archived'));
+	const activeCount = $derived(activeProjects.filter(p => p.status === 'active').length);
 
 	// Activity feed stays local for now — will be sourced from agent websockets
 	const activity = [
@@ -18,6 +18,81 @@
 	const kindIcon: Record<string, string> = {
 		ccs: '◈', shopify: '◆', defi: '◉', ai: '◎', infra: '⬡', forge: '◆', generic: '○',
 	};
+
+	// ── Ollama-powered briefing & summary state ──────────────────
+	let briefingText = $state<string>('');
+	let briefingLoading = $state(false);
+	let briefingError = $state<string>('');
+	let briefingMeta = $state<{ durationMs?: number; model?: string } | null>(null);
+
+	let summaryText = $state<string>('');
+	let summaryLoading = $state(false);
+	let summaryError = $state<string>('');
+
+	async function generateBriefing() {
+		briefingLoading = true;
+		briefingError = '';
+		briefingMeta = null;
+		try {
+			const res = await fetch('/api/ollama/brief', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					projects: activeProjects.map(p => ({
+						name: p.name,
+						status: p.status,
+						description: p.description,
+						client: p.client,
+					})),
+					activity: activity.map(a => ({
+						project: a.project,
+						event: a.event,
+						time: a.time,
+					})),
+				}),
+			});
+			const data = await res.json();
+			if (!res.ok) {
+				briefingError = data.error || 'Failed to generate briefing';
+				return;
+			}
+			briefingText = data.briefing;
+			briefingMeta = data.meta;
+		} catch (err) {
+			briefingError = err instanceof Error ? err.message : 'Network error';
+		} finally {
+			briefingLoading = false;
+		}
+	}
+
+	async function summarizeActivity() {
+		summaryLoading = true;
+		summaryError = '';
+		try {
+			const res = await fetch('/api/ollama/summarize', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					events: activity.map(a => ({
+						project: a.project,
+						event: a.event,
+						time: a.time,
+					})),
+					style: 'brief',
+				}),
+			});
+			const data = await res.json();
+			if (!res.ok) {
+				summaryError = data.error || 'Failed to summarize';
+				return;
+			}
+			summaryText = data.summary;
+		} catch (err) {
+			summaryError = err instanceof Error ? err.message : 'Network error';
+		} finally {
+			summaryLoading = false;
+		}
+	}
 </script>
 
 <div class="page">
@@ -30,6 +105,53 @@
 			<span class="badge badge-active">{activeCount} active</span>
 		</div>
 	</header>
+
+	<!-- Daily Briefing (local LLM) -->
+	<section class="section briefing">
+		<div class="briefing-header">
+			<div>
+				<h2 class="section-title briefing-title">
+					<span class="briefing-badge">AI</span>
+					Daily Briefing
+				</h2>
+				<p class="briefing-sub">Generated locally on your iMac (phi3)</p>
+			</div>
+			<button
+				class="briefing-btn"
+				onclick={generateBriefing}
+				disabled={briefingLoading}
+			>
+				{briefingLoading ? 'Generating…' : briefingText ? 'Regenerate' : 'Generate briefing'}
+			</button>
+		</div>
+
+		{#if briefingError}
+			<div class="briefing-error">{briefingError}</div>
+		{:else if briefingLoading}
+			<div class="briefing-body skeleton">
+				<div class="sk-line"></div>
+				<div class="sk-line"></div>
+				<div class="sk-line short"></div>
+			</div>
+		{:else if briefingText}
+			<div class="briefing-body">
+				{#each briefingText.split(/\n\n+/) as para}
+					<p>{para}</p>
+				{/each}
+			</div>
+			{#if briefingMeta}
+				<div class="briefing-meta dim">
+					{briefingMeta.model}
+					{#if briefingMeta.durationMs}· {(briefingMeta.durationMs / 1000).toFixed(1)}s{/if}
+				</div>
+			{/if}
+		{:else}
+			<div class="briefing-empty dim">
+				No briefing yet. Click "Generate briefing" to get a short daily summary
+				of active projects and recent progress.
+			</div>
+		{/if}
+	</section>
 
 	<!-- Stat row -->
 	<div class="stat-row">
@@ -85,7 +207,27 @@
 
 	<!-- Activity feed -->
 	<section class="section">
-		<h2 class="section-title">Recent Activity</h2>
+		<div class="activity-header">
+			<h2 class="section-title">Recent Activity</h2>
+			<button
+				class="summarize-btn"
+				onclick={summarizeActivity}
+				disabled={summaryLoading}
+				title="Summarize with local LLM"
+			>
+				{summaryLoading ? 'Summarizing…' : 'Summarize'}
+			</button>
+		</div>
+
+		{#if summaryError}
+			<div class="activity-summary error">{summaryError}</div>
+		{:else if summaryText}
+			<div class="activity-summary">
+				<span class="summary-label">AI summary:</span>
+				{summaryText}
+			</div>
+		{/if}
+
 		<div class="feed">
 			{#each activity as item}
 				<div class="feed-item">
@@ -144,6 +286,160 @@
 		letter-spacing: 0.1em;
 		color: var(--color-muted);
 		margin: 0 0 1rem;
+	}
+
+	/* ── Briefing ────────────────────────────────────────────── */
+	.briefing {
+		background: var(--color-surface);
+		border: 1px solid var(--color-border);
+		border-left: 3px solid var(--color-accent, #7c83ff);
+		border-radius: var(--radius-lg);
+		padding: 1.25rem 1.5rem 1.5rem;
+	}
+
+	.briefing-header {
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 1rem;
+		margin-bottom: 0.75rem;
+	}
+
+	.briefing-title {
+		margin: 0;
+		display: inline-flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
+	.briefing-badge {
+		font-size: 0.6rem;
+		font-weight: 700;
+		letter-spacing: 0.1em;
+		background: color-mix(in srgb, var(--color-accent, #7c83ff) 15%, transparent);
+		color: var(--color-accent, #7c83ff);
+		border: 1px solid color-mix(in srgb, var(--color-accent, #7c83ff) 30%, transparent);
+		border-radius: 3px;
+		padding: 0.1rem 0.35rem;
+		text-transform: none;
+		letter-spacing: 0.05em;
+	}
+
+	.briefing-sub {
+		font-size: 0.75rem;
+		color: var(--color-muted);
+		margin: 0.25rem 0 0;
+	}
+
+	.briefing-btn {
+		background: var(--color-accent, #7c83ff);
+		color: white;
+		border: none;
+		border-radius: var(--radius-md, 4px);
+		padding: 0.5rem 0.9rem;
+		font-size: 0.8rem;
+		font-weight: 600;
+		cursor: pointer;
+		white-space: nowrap;
+		transition: opacity 0.2s;
+	}
+	.briefing-btn:hover { opacity: 0.85; }
+	.briefing-btn:disabled { opacity: 0.5; cursor: wait; }
+
+	.briefing-body p {
+		font-size: 0.9rem;
+		line-height: 1.6;
+		color: var(--color-text, #e8e8ea);
+		margin: 0.5rem 0;
+	}
+	.briefing-body p:first-child { margin-top: 0; }
+	.briefing-body p:last-child { margin-bottom: 0; }
+
+	.briefing-empty {
+		font-size: 0.85rem;
+		line-height: 1.5;
+		padding: 0.5rem 0;
+	}
+
+	.briefing-error {
+		font-size: 0.85rem;
+		color: #ff6b6b;
+		padding: 0.5rem 0;
+	}
+
+	.briefing-meta {
+		font-family: var(--font-mono);
+		font-size: 0.7rem;
+		margin-top: 0.75rem;
+		padding-top: 0.75rem;
+		border-top: 1px solid var(--color-border);
+	}
+
+	.skeleton .sk-line {
+		height: 0.85rem;
+		background: linear-gradient(
+			90deg,
+			var(--color-surface-2) 0%,
+			color-mix(in srgb, var(--color-surface-2) 60%, white) 50%,
+			var(--color-surface-2) 100%
+		);
+		background-size: 200% 100%;
+		animation: shimmer 1.4s infinite;
+		border-radius: 3px;
+		margin: 0.6rem 0;
+	}
+	.skeleton .sk-line.short { width: 60%; }
+
+	@keyframes shimmer {
+		0% { background-position: 200% 0; }
+		100% { background-position: -200% 0; }
+	}
+
+	/* ── Activity header + summarize button ─────────────────── */
+	.activity-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		margin-bottom: 1rem;
+	}
+	.activity-header .section-title { margin: 0; }
+
+	.summarize-btn {
+		background: transparent;
+		border: 1px solid var(--color-border);
+		color: var(--color-text-dim);
+		padding: 0.35rem 0.75rem;
+		border-radius: var(--radius-md, 4px);
+		font-size: 0.75rem;
+		font-weight: 500;
+		cursor: pointer;
+		transition: border-color 0.2s, color 0.2s;
+	}
+	.summarize-btn:hover:not(:disabled) {
+		border-color: var(--color-accent, #7c83ff);
+		color: var(--color-text, #e8e8ea);
+	}
+	.summarize-btn:disabled { opacity: 0.5; cursor: wait; }
+
+	.activity-summary {
+		background: var(--color-surface);
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius-lg);
+		padding: 0.75rem 1rem;
+		font-size: 0.85rem;
+		line-height: 1.5;
+		color: var(--color-text, #e8e8ea);
+		margin-bottom: 0.75rem;
+	}
+	.activity-summary.error { color: #ff6b6b; }
+
+	.summary-label {
+		font-family: var(--font-mono);
+		font-size: 0.7rem;
+		color: var(--color-muted);
+		text-transform: uppercase;
+		letter-spacing: 0.08em;
+		margin-right: 0.5rem;
 	}
 
 	/* ── Project grid ────────────────────────────────────────── */

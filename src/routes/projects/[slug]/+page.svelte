@@ -4,9 +4,12 @@
 	import type { AsanaTask } from '$lib/integrations/asana';
 
 	let { data }: { data: PageData } = $props();
-	const { manifest, asana, shopify, commits } = data;
+	const manifest = $derived(data.manifest);
+	const asana    = $derived(data.asana);
+	const shopify  = $derived(data.shopify);
+	const commits  = $derived(data.commits);
 
-	const accentVar = `var(${manifest.accent})`;
+	const accentVar = $derived(`var(${manifest.accent})`);
 
 	type Tab = 'overview' | 'board' | 'chat' | 'commits';
 	let activeTab = $state<Tab>('overview');

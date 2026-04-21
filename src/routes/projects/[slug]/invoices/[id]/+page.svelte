@@ -4,15 +4,16 @@
 	import type { Invoice, InvoiceLineItem, InvoiceStatus } from '$lib/types/invoice';
 
 	let { data }: { data: PageData } = $props();
-	const { manifest } = data;
+	const manifest = $derived(data.manifest);
 
+	// Intentional one-time copy — inv is a local editable state, not synced back to server data
 	let inv   = $state<Invoice>({ ...data.invoice });
 	let saved = $state(true);
 	let saving = $state(false);
 	let saveError = $state('');
 	let previewMode = $state(false);
 
-	const accentVar = `var(${manifest.accent})`;
+	const accentVar = $derived(`var(${manifest.accent})`);
 
 	// Recompute totals whenever line items or tax change
 	const totals = $derived(computeTotals(inv.lineItems, inv.taxRate ?? 0));

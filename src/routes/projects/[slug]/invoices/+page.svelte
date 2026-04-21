@@ -4,13 +4,13 @@
 	import type { Invoice, InvoiceStatus } from '$lib/types/invoice';
 
 	let { data }: { data: PageData } = $props();
-	let { manifest, invoices: initial } = data;
+	const manifest = $derived(data.manifest);
 
-	let invoices = $state<Invoice[]>(initial);
+	let invoices = $state<Invoice[]>(data.invoices ?? []);
 	let creating = $state(false);
 	let error    = $state('');
 
-	const accentVar = `var(${manifest.accent})`;
+	const accentVar = $derived(`var(${manifest.accent})`);
 
 	const statusColor: Record<InvoiceStatus, string> = {
 		draft:   'var(--color-muted)',
