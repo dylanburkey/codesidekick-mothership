@@ -1,49 +1,53 @@
 <script lang="ts">
   import { enhance } from '$app/forms';
+  import { settings } from '$lib/stores/settings';
   import type { ActionData } from './$types';
 
-  export let form: ActionData;
+  let { form }: { form: ActionData } = $props();
 
   // ── Step state ──────────────────────────────────────────────────
-  let step = 1;
+  let step = $state(1);
   const TOTAL_STEPS = 4;
 
   // ── Form fields ─────────────────────────────────────────────────
-  let name = '';
-  let slug = '';
-  let kind = 'web-app';
-  let client = '';
-  let repo = '';
+  let name = $state('');
+  let kind = $state('web-app');
+  let client = $state('');
+  let repo = $state('');
 
-  let frontend = '';
-  let backend = '';
-  let infra = 'Cloudflare Workers';
-  let database = '';
+  let frontend = $state('');
+  let backend = $state('');
+  let infra = $state('Cloudflare Workers');
+  let database = $state('');
 
-  let goal = '';
-  let deliverables = '';
-  let timeline = '';
-  let constraints = '';
+  let goal = $state('');
+  let deliverables = $state('');
+  let timeline = $state('');
+  let constraints = $state('');
 
-  let hasAsana = false;
-  let hasShopify = false;
-  let shopifyDomain = '';
-  let hasAgent = false;
+  let hasAsana = $state(false);
+  let hasShopify = $state(false);
+  let shopifyDomain = $state('');
+  let hasAgent = $state(false);
 
   // ── Results tab ─────────────────────────────────────────────────
-  let activeTab: 'brief' | 'tasks' | 'config' = 'brief';
-  let submitting = false;
+  let activeTab = $state<'brief' | 'tasks' | 'config'>('brief');
+  let submitting = $state(false);
 
   // Auto-generate slug from name
-  $: slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+  const slug = $derived(
+    name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+  );
 
   // Task grouping
   type TaskItem = { name: string; section?: string; priority: string; notes: string };
-  $: tasksBySection = (form?.tasks ?? []).reduce<Record<string, TaskItem[]>>((acc, t) => {
-    const s = t.section ?? 'Other';
-    (acc[s] ??= []).push(t);
-    return acc;
-  }, {});
+  const tasksBySection = $derived(
+    (form?.tasks ?? []).reduce<Record<string, TaskItem[]>>((acc, t) => {
+      const s = t.section ?? 'Other';
+      (acc[s] ??= []).push(t);
+      return acc;
+    }, {})
+  );
 
   const kindOptions = [
     { value: 'web-app',    label: 'Web App' },
@@ -82,7 +86,7 @@
       {#if form?.success}
         Review your brief, task list, and CCS config below.
       {:else}
-        Answer a few questions and Workers AI will generate your brief, Asana tasks, and CCS manifest.
+        Answer a few questions and Claude will generate your brief, Asana tasks, and CCS manifest.
       {/if}
     </p>
   </header>
@@ -94,19 +98,19 @@
       <!-- Tab bar -->
       <div class="results__tabs" role="tablist">
         <button role="tab" class="results__tab" class:results__tab--active={activeTab === 'brief'}
-          on:click={() => activeTab = 'brief'}>📄 Brief</button>
+          onclick={() => activeTab = 'brief'}>📄 Brief</button>
         <button role="tab" class="results__tab" class:results__tab--active={activeTab === 'tasks'}
-          on:click={() => activeTab = 'tasks'}>✅ Tasks ({form.tasks?.length ?? 0})</button>
+          onclick={() => activeTab = 'tasks'}>✅ Tasks ({form.tasks?.length ?? 0})</button>
         <button role="tab" class="results__tab" class:results__tab--active={activeTab === 'config'}
-          on:click={() => activeTab = 'config'}>⚙️ CCS Config</button>
-        <button class="results__reset" on:click={() => { step = 1; }}>← Start over</button>
+          onclick={() => activeTab = 'config'}>⚙️ CCS Config</button>
+        <button class="results__reset" onclick={() => { step = 1; }}>← Start over</button>
       </div>
 
       <!-- Brief tab -->
       {#if activeTab === 'brief'}
         <div class="panel">
           <div class="panel__actions">
-            <button class="btn btn--ghost" on:click={() => copyText(JSON.stringify(form.brief, null, 2))}>Copy JSON</button>
+            <button class="btn btn--ghost" onclick={() => copyText(JSON.stringify(form?.brief, null, 2))}>Copy JSON</button>
           </div>
           <p class="brief__summary">{form.brief?.summary}</p>
 
@@ -142,7 +146,7 @@
       {#if activeTab === 'tasks'}
         <div class="panel">
           <div class="panel__actions">
-            <button class="btn btn--ghost" on:click={() => copyText(JSON.stringify(form.tasks, null, 2))}>Copy JSON</button>
+            <button class="btn btn--ghost" onclick={() => copyText(JSON.stringify(form?.tasks, null, 2))}>Copy JSON</button>
             <span class="panel__note">Push to Asana coming soon</span>
           </div>
           {#each Object.entries(tasksBySection) as [section, tasks]}
@@ -166,10 +170,10 @@
       {#if activeTab === 'config'}
         <div class="panel">
           <div class="panel__actions">
-            <button class="btn btn--ghost" on:click={() => copyText(JSON.stringify(form.ccsConfig, null, 2))}>Copy JSON</button>
-            <button class="btn btn--ghost" on:click={() => {
-              const blob = new Blob([JSON.stringify(form.ccsConfig, null, 2)], { type: 'application/json' });
-              const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: `${form.ccsConfig?.id ?? 'project'}.ccs.json` });
+            <button class="btn btn--ghost" onclick={() => copyText(JSON.stringify(form?.ccsConfig, null, 2))}>Copy JSON</button>
+            <button class="btn btn--ghost" onclick={() => {
+              const blob = new Blob([JSON.stringify(form?.ccsConfig, null, 2)], { type: 'application/json' });
+              const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: `${form?.ccsConfig?.id ?? 'project'}.ccs.json` });
               a.click();
             }}>Download</button>
           </div>
@@ -204,17 +208,24 @@
       {/each}
     </div>
 
+    <!--
+      NOTE: we use CSS visibility (step--hidden) rather than fieldset[disabled]
+      so that ALL fields post their values on the final submit, regardless of
+      which step is currently visible. This was the source of the
+      "name and goal are required" bug.
+    -->
     <form method="POST" action="?/generate" class="intake__form"
       use:enhance={() => {
         submitting = true;
         return async ({ update }) => { await update(); submitting = false; };
       }}>
 
-      <!-- Hidden fields for all steps so they all submit -->
       <input type="hidden" name="slug" value={slug} />
+      <input type="hidden" name="userApiKey" value={$settings.ai.anthropicApiKey} />
+      <input type="hidden" name="userModel" value={$settings.ai.anthropicModel} />
 
       <!-- ── Step 1: Basics ──────────────────────────── -->
-      <fieldset class="step" class:step--active={step === 1} disabled={step !== 1} aria-hidden={step !== 1}>
+      <fieldset class="step" class:step--hidden={step !== 1}>
         <legend>Project Basics</legend>
 
         <div class="field">
@@ -242,7 +253,7 @@
       </fieldset>
 
       <!-- ── Step 2: Stack ───────────────────────────── -->
-      <fieldset class="step" class:step--active={step === 2} disabled={step !== 2} aria-hidden={step !== 2}>
+      <fieldset class="step" class:step--hidden={step !== 2}>
         <legend>Tech Stack</legend>
 
         <div class="field">
@@ -267,7 +278,7 @@
       </fieldset>
 
       <!-- ── Step 3: Goals ───────────────────────────── -->
-      <fieldset class="step" class:step--active={step === 3} disabled={step !== 3} aria-hidden={step !== 3}>
+      <fieldset class="step" class:step--hidden={step !== 3}>
         <legend>Goals &amp; Scope</legend>
 
         <div class="field">
@@ -295,7 +306,7 @@
       </fieldset>
 
       <!-- ── Step 4: Integrations ────────────────────── -->
-      <fieldset class="step" class:step--active={step === 4} disabled={step !== 4} aria-hidden={step !== 4}>
+      <fieldset class="step" class:step--hidden={step !== 4}>
         <legend>Integrations</legend>
 
         <div class="toggles">
@@ -327,14 +338,14 @@
       <!-- ── Nav buttons ─────────────────────────────── -->
       <div class="intake__nav">
         {#if step > 1}
-          <button type="button" class="btn btn--ghost" on:click={() => step--}>← Back</button>
+          <button type="button" class="btn btn--ghost" onclick={() => step--}>← Back</button>
         {:else}
           <span></span>
         {/if}
 
         {#if step < TOTAL_STEPS}
-          <button type="button" class="btn btn--primary" on:click={() => step++}
-            disabled={step === 1 && (!name || !goal && false)}>
+          <button type="button" class="btn btn--primary" onclick={() => step++}
+            disabled={step === 1 && !name}>
             Next →
           </button>
         {:else}
@@ -342,7 +353,7 @@
             {#if submitting}
               <span class="spinner" aria-hidden="true"></span> Generating…
             {:else}
-              ✨ Generate with Workers AI
+              ✨ Generate with Claude
             {/if}
           </button>
         {/if}
@@ -447,12 +458,15 @@ fieldset {
   margin: 0;
 }
 
-.step {
+/*
+  CRITICAL: we hide inactive steps with CSS visibility rather than the
+  'disabled' attribute. Disabled form fields don't submit their values — so
+  when we hit submit on step 4, the 'name' field on step 1 was being silently
+  dropped from the POST body, causing the "name and goal are required" error.
+  Using display:none + aria-hidden preserves field values while hiding them.
+*/
+.step--hidden {
   display: none;
-}
-
-.step--active {
-  display: block;
 }
 
 legend {

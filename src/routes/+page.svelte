@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { PageData } from './$types';
 	import { formatRelative } from '$lib/utils';
+	import { settings } from '$lib/stores/settings';
 
 	let { data }: { data: PageData } = $props();
 
@@ -49,6 +50,8 @@
 						event: a.event,
 						time: a.time,
 					})),
+					ollamaBaseUrl: $settings.ai.ollamaBaseUrl,
+					ollamaModel: $settings.ai.ollamaModel,
 				}),
 			});
 			const data = await res.json();
@@ -79,6 +82,8 @@
 						time: a.time,
 					})),
 					style: 'brief',
+					ollamaBaseUrl: $settings.ai.ollamaBaseUrl,
+					ollamaModel: $settings.ai.ollamaModel,
 				}),
 			});
 			const data = await res.json();

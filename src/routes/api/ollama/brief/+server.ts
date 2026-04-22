@@ -31,6 +31,9 @@ interface RequestBody {
   activity: BriefActivity[];
   /** Optional user-supplied hint: "focus on shipping Forge", "prep for client call", etc. */
   focus?: string;
+  /** Optional Ollama overrides from user settings. */
+  ollamaBaseUrl?: string;
+  ollamaModel?: string;
 }
 
 function fmt(dt: string | Date): string {
@@ -46,7 +49,7 @@ export const POST: RequestHandler = async ({ request }) => {
     return json({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
-  const { projects, activity, focus } = body;
+  const { projects, activity, focus, ollamaBaseUrl, ollamaModel } = body;
 
   if (!Array.isArray(projects)) {
     return json({ error: 'projects array is required' }, { status: 400 });
@@ -100,6 +103,8 @@ export const POST: RequestHandler = async ({ request }) => {
       system,
       temperature: 0.4,
       maxTokens: 400,
+      baseUrl: ollamaBaseUrl,
+      model: ollamaModel,
     });
 
     return json({

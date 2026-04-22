@@ -18,6 +18,9 @@ export interface ActivityEvent {
 interface RequestBody {
   events: ActivityEvent[];
   style?: 'brief' | 'detailed';
+  /** Optional Ollama overrides from user settings. */
+  ollamaBaseUrl?: string;
+  ollamaModel?: string;
 }
 
 function formatEventsForPrompt(events: ActivityEvent[]): string {
@@ -37,7 +40,7 @@ export const POST: RequestHandler = async ({ request }) => {
     return json({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
-  const { events, style = 'brief' } = body;
+  const { events, style = 'brief', ollamaBaseUrl, ollamaModel } = body;
 
   if (!Array.isArray(events) || events.length === 0) {
     return json({ error: 'events array is required' }, { status: 400 });
@@ -68,6 +71,8 @@ export const POST: RequestHandler = async ({ request }) => {
       system,
       temperature: 0.3,
       maxTokens: 200,
+      baseUrl: ollamaBaseUrl,
+      model: ollamaModel,
     });
 
     return json({

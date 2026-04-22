@@ -23,6 +23,8 @@ export interface GenerateOptions {
   system?: string;
   /** Override the default model (phi3). */
   model?: string;
+  /** Override the default base URL (usually from user settings). */
+  baseUrl?: string;
   /** Temperature 0..1 — lower = more deterministic. Default 0.3. */
   temperature?: number;
   /** Max tokens to generate. Default 512. */
@@ -54,7 +56,7 @@ export class OllamaError extends Error {
  * response once the model is done.
  */
 export async function generate(opts: GenerateOptions): Promise<GenerateResult> {
-  const base = env.OLLAMA_BASE_URL || DEFAULT_BASE;
+  const base = opts.baseUrl || env.OLLAMA_BASE_URL || DEFAULT_BASE;
   const model = opts.model || env.OLLAMA_MODEL || DEFAULT_MODEL;
   const timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 
