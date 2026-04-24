@@ -1,0 +1,202 @@
+{
+  "meta": {
+    "lastUpdated": "2026-04-24",
+    "description": "File index for Codesidekick Mothership — includes purpose and key exports"
+  },
+  "config": {
+    "src/lib/config/projects.ts": {
+      "purpose": "Master project manifest — single source of truth for all tracked projects",
+      "exports": ["projectManifest", "getProject(id)", "getActiveProjects()", "ProjectManifest", "ProjectKind", "ProjectStatus", "AsanaConfig", "ShopifyConfig", "AgentConfig"],
+      "lines": 152,
+      "notes": "Add new projects here only. Downstream routes auto-adapt."
+    },
+    "wrangler.toml": {
+      "purpose": "Cloudflare Pages worker config — bindings, compatibility, KV namespaces",
+      "notes": "Worker name: pm-arigato. KV_INVOICES bound with real namespace IDs."
+    },
+    ".env.example": {
+      "purpose": "Environment variable template — copy to .env and fill values",
+      "vars": ["ASANA_PAT", "ASANA_WORKSPACE_ID", "ASANA_PROJECT_*", "SHOPIFY_ADMIN_TOKEN", "ANTHROPIC_API_KEY", "OLLAMA_BASE_URL", "OLLAMA_MODEL", "GITHUB_TOKEN"]
+    },
+    "svelte.config.js": {
+      "purpose": "SvelteKit config — adapter-cloudflare primary"
+    },
+    "vite.config.ts": {
+      "purpose": "Vite config — @tailwindcss/vite plugin, path aliases"
+    },
+    "tsconfig.json": {
+      "purpose": "TypeScript config — strict mode"
+    }
+  },
+  "types": {
+    "src/app.d.ts": {
+      "purpose": "Global TypeScript declarations — KVNamespace interface, App.Platform with AI+KV_INVOICES bindings",
+      "lines": 37
+    },
+    "src/lib/types/invoice.ts": {
+      "purpose": "Invoice domain types — Invoice, LineItem, InvoiceStatus, computeTotals(), newInvoiceId()",
+      "lines": 70
+    },
+    "src/lib/types/ccs.ts": {
+      "purpose": "CCS agent types — CCSSnapshot, CCSPhase, CCSTask, CCSExecution, GitCommit, CCSReviewIssue"
+    }
+  },
+  "stores": {
+    "src/lib/stores/settings.ts": {
+      "purpose": "Persisted user settings — BYOK keys, AI routing, integrations, appearance",
+      "exports": ["settings", "snapshot()", "update(patch)", "resetToDefaults()", "exportSettings()", "importSettings(raw)", "defaultSettings", "AppSettings"],
+      "persistence": "localStorage key: mothership.settings.v1, version: 1",
+      "lines": 190
+    },
+    "src/lib/stores/projects.ts": {
+      "purpose": "Svelte store wrapping project manifest for reactive access"
+    }
+  },
+  "integrations": {
+    "src/lib/integrations/asana.ts": {
+      "purpose": "Asana API adapter — server-side only. Fetches and normalises project tasks.",
+      "exports": ["fetchAsanaProject(projectId, pat)", "AsanaTask", "AsanaProjectSummary"],
+      "auth": "ASANA_PAT env var",
+      "lines": 104
+    },
+    "src/lib/integrations/shopify.ts": {
+      "purpose": "Shopify Admin API adapter — store meta, themes, recent orders",
+      "auth": "SHOPIFY_ADMIN_TOKEN env var",
+      "apiVersion": "2025-01",
+      "lines": 100
+    },
+    "src/lib/integrations/invoices.ts": {
+      "purpose": "Invoice CRUD via Cloudflare KV (KV_INVOICES) with in-memory Map fallback for local dev",
+      "exports": ["listInvoices(platform, projectId)", "getInvoice(platform, projectId, invoiceId)", "saveInvoice(platform, invoice)", "deleteInvoice(platform, projectId, invoiceId)", "invoiceKey(pid, id)", "indexKey(pid)"],
+      "lines": 96
+    },
+    "src/lib/integrations/ollama.ts": {
+      "purpose": "Local LLM client for iMac Ollama server (10.0.0.45:11434). Used for summarization and daily briefings.",
+      "exports": ["generate(options)", "OllamaError", "GenerateOptions", "GenerateResult"],
+      "defaultModel": "phi3",
+      "defaultTimeout": "30s",
+      "lines": 124
+    }
+  },
+  "routes": {
+    "src/routes/+layout.svelte": {
+      "purpose": "App shell — sidebar navigation, project list, responsive layout",
+      "lines": 152
+    },
+    "src/routes/+page.svelte": {
+      "purpose": "Dashboard home — active project cards, daily briefing, activity feed",
+      "lines": 452
+    },
+    "src/routes/+page.server.ts": {
+      "purpose": "Dashboard server load — passes project manifest to client"
+    },
+    "src/routes/dashboard/+page.server.ts": {
+      "purpose": "Dashboard sub-route server load"
+    },
+    "src/routes/settings/+page.svelte": {
+      "purpose": "Settings UI — AI providers (BYOK), integrations, appearance, data export/import/reset",
+      "tabs": ["ai", "integrations", "appearance", "data"],
+      "lines": 1021
+    },
+    "src/routes/forge/+page.svelte": {
+      "purpose": "Forge project dedicated page (Shopify theme for Zebra Skimmers)",
+      "lines": 159
+    },
+    "src/routes/walletwatch/+page.svelte": {
+      "purpose": "WalletWatch on-chain monitoring page",
+      "lines": 123
+    },
+    "src/routes/ccs/+page.svelte": {
+      "purpose": "Claude Code Sidekick project page"
+    },
+    "src/routes/projects/[slug]/+page.svelte": {
+      "purpose": "Dynamic project detail page — tasks, integrations, AI chat, GitHub feed",
+      "lines": 620
+    },
+    "src/routes/projects/[slug]/+page.server.ts": {
+      "purpose": "Server load for project detail — fetches Asana, Shopify, CCS agent data based on manifest config",
+      "lines": 91
+    },
+    "src/routes/projects/[slug]/invoices/+page.svelte": {
+      "purpose": "Invoice list for a project",
+      "lines": 210
+    },
+    "src/routes/projects/[slug]/invoices/+page.server.ts": {
+      "purpose": "Server load — listInvoices() from KV"
+    },
+    "src/routes/projects/[slug]/invoices/[id]/+page.svelte": {
+      "purpose": "Invoice detail / editor view",
+      "lines": 430
+    },
+    "src/routes/projects/[slug]/invoices/[id]/+page.server.ts": {
+      "purpose": "Server load — getInvoice() from KV"
+    },
+    "src/routes/projects/new/+page.svelte": {
+      "purpose": "Multi-step project intake form — 4 steps: basics, stack, goals, integrations",
+      "lines": 859
+    },
+    "src/routes/projects/new/+page.server.ts": {
+      "purpose": "Form actions — AI-generated project brief + tasks via Anthropic API, exports ccsConfig JSON",
+      "lines": 245
+    }
+  },
+  "api": {
+    "src/routes/api/anthropic/test/+server.ts": {
+      "purpose": "POST /api/anthropic/test — validate Anthropic API key (1-token ping). CORS proxy for browser.",
+      "lines": 78
+    },
+    "src/routes/api/chat/+server.ts": {
+      "purpose": "POST /api/chat — project-aware AI chat using Anthropic (claude-sonnet-4-5, max 2048 tokens)",
+      "lines": 79
+    },
+    "src/routes/api/invoices/+server.ts": {
+      "purpose": "POST/PUT/DELETE /api/invoices — invoice CRUD backed by KV_INVOICES",
+      "lines": 64
+    },
+    "src/routes/api/ollama/brief/+server.ts": {
+      "purpose": "POST /api/ollama/brief — generate 3-paragraph daily briefing via local Ollama",
+      "lines": 129
+    },
+    "src/routes/api/ollama/summarize/+server.ts": {
+      "purpose": "POST /api/ollama/summarize — summarize activity events into a short paragraph via local Ollama",
+      "lines": 97
+    }
+  },
+  "infrastructure": {
+    "Dockerfile": {
+      "purpose": "Multi-stage Docker build for Coolify self-hosted deployment (node:20-alpine, port 3000)"
+    },
+    ".github/workflows/deploy.yml": {
+      "purpose": "CI/CD — deploy to Cloudflare Pages on push"
+    },
+    ".github/workflows/ci.yml": {
+      "purpose": "CI — run svelte-check and type validation"
+    },
+    "scripts/health-check.sh": {
+      "purpose": "Docker health check script"
+    },
+    "docs/project-persistence.md": {
+      "purpose": "Architecture doc — KV storage patterns and project persistence design"
+    }
+  },
+  "assets": {
+    "src/app.css": {
+      "purpose": "Global CSS — Tailwind base, CSS custom properties for project accent colors"
+    },
+    "src/app.html": {
+      "purpose": "HTML shell"
+    },
+    "src/lib/assets/favicon.svg": {
+      "purpose": "App favicon"
+    },
+    "src/lib/index.ts": {
+      "purpose": "Barrel export for lib/"
+    },
+    "src/lib/utils.ts": {
+      "purpose": "Shared utility functions"
+    },
+    "logs/.gitkeep": {
+      "purpose": "Placeholder to preserve logs/ dir in git"
+    }
+  }
+}

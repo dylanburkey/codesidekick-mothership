@@ -1,0 +1,122 @@
+{
+  "meta": {
+    "lastUpdated": "2026-04-24",
+    "version": "1.0.0",
+    "description": "Codesidekick Mothership — SvelteKit project management dashboard"
+  },
+  "stack": {
+    "framework": "SvelteKit 2 (Svelte 5 runes)",
+    "language": "TypeScript 5.9",
+    "styling": "Tailwind CSS 4",
+    "ui": ["bits-ui 2", "lucide-svelte", "clsx", "tailwind-merge"],
+    "runtime": "Cloudflare Pages (primary) + Node/Docker (self-hosted fallback)",
+    "packageManager": "pnpm (workspace)"
+  },
+  "deployment": {
+    "primary": {
+      "platform": "Cloudflare Pages",
+      "adapter": "@sveltejs/adapter-cloudflare",
+      "workerName": "pm-arigato",
+      "compatibilityDate": "2025-01-01",
+      "compatibilityFlags": ["nodejs_compat"]
+    },
+    "selfHosted": {
+      "platform": "Docker (Coolify)",
+      "adapter": "@sveltejs/adapter-node",
+      "dockerfile": "Dockerfile",
+      "port": 3000,
+      "image": "node:20-alpine"
+    },
+    "ci": {
+      "deploy": ".github/workflows/deploy.yml",
+      "ci": ".github/workflows/ci.yml"
+    }
+  },
+  "cloudflareBindings": {
+    "AI": {
+      "type": "Workers AI",
+      "binding": "AI",
+      "usage": "Cloudflare AI binding — available as platform.env.AI"
+    },
+    "KV_INVOICES": {
+      "type": "KV Namespace",
+      "id": "1a257a6ae93f4954b291486f28e54854",
+      "previewId": "0dd248aa76ec4729927f5c84ae59ab1b",
+      "usage": "Invoice persistence — keys: invoice:{pid}:{id} and invoices:{pid}"
+    }
+  },
+  "dataFlow": {
+    "projectManifest": {
+      "source": "src/lib/config/projects.ts",
+      "pattern": "Static manifest array — add projects here only. No DB.",
+      "consumed": ["src/routes/+page.svelte", "src/routes/projects/[slug]/+page.server.ts", "src/routes/api/ollama/brief/+server.ts"]
+    },
+    "settings": {
+      "source": "src/lib/stores/settings.ts",
+      "persistence": "localStorage (browser only, key: mothership.settings.v1)",
+      "version": 1,
+      "consumed": ["src/routes/settings/+page.svelte", "src/routes/api/anthropic/test/+server.ts"]
+    },
+    "invoices": {
+      "source": "src/lib/integrations/invoices.ts",
+      "persistence": "Cloudflare KV (KV_INVOICES) with in-memory Map fallback for local dev",
+      "api": "src/routes/api/invoices/+server.ts",
+      "consumed": ["src/routes/projects/[slug]/invoices/+page.svelte"]
+    },
+    "asana": {
+      "source": "src/lib/integrations/asana.ts",
+      "auth": "ASANA_PAT env var (server-side only)",
+      "consumed": ["src/routes/projects/[slug]/+page.server.ts"]
+    },
+    "shopify": {
+      "source": "src/lib/integrations/shopify.ts",
+      "auth": "SHOPIFY_ADMIN_TOKEN env var (server-side only)",
+      "consumed": ["src/routes/projects/[slug]/+page.server.ts"]
+    },
+    "ollama": {
+      "source": "src/lib/integrations/ollama.ts",
+      "server": "iMac at 10.0.0.45:11434 (default)",
+      "defaultModel": "phi3",
+      "purpose": "High-volume low-stakes tasks: summarization, daily briefings, categorization",
+      "apis": ["src/routes/api/ollama/brief/+server.ts", "src/routes/api/ollama/summarize/+server.ts"]
+    },
+    "anthropic": {
+      "auth": "ANTHROPIC_API_KEY env var (server) or user BYOK via settings store",
+      "defaultModel": "claude-sonnet-4-5",
+      "purpose": "Reasoning-heavy tasks: chat, project intake AI generation",
+      "apis": ["src/routes/api/chat/+server.ts", "src/routes/api/anthropic/test/+server.ts"],
+      "corsProxy": "Browser cannot call api.anthropic.com directly — all calls go through server endpoints"
+    }
+  },
+  "aiRouting": {
+    "strategy": "auto | anthropic | ollama — configurable per user via settings.ai.routing",
+    "auto": "Use Anthropic when available, fall back to Ollama",
+    "anthropic": "Always use Anthropic (fail if unavailable)",
+    "ollama": "Always use Ollama (free, private, lower quality)"
+  },
+  "routePatterns": {
+    "fileRouting": "SvelteKit file-based routing under src/routes/",
+    "serverLoad": "+page.server.ts — fetch data server-side (API keys safe here)",
+    "clientPages": "+page.svelte — Svelte 5 runes ($state, $derived, $effect)",
+    "apiRoutes": "src/routes/api/**/*server.ts — REST endpoints",
+    "dynamicRoute": "src/routes/projects/[slug]/ — slug matches project manifest id"
+  },
+  "integrationArchitecture": {
+    "pattern": "Each integration is a standalone module in src/lib/integrations/",
+    "serverOnly": ["asana.ts", "shopify.ts", "invoices.ts", "ollama.ts"],
+    "adapterPattern": "Integration modules export typed async functions; page.server.ts calls them and passes data to client via SvelteKit load()"
+  },
+  "typeSystem": {
+    "projectTypes": "src/lib/config/projects.ts — ProjectManifest, ProjectKind, ProjectStatus",
+    "invoiceTypes": "src/lib/types/invoice.ts — Invoice, LineItem, computeTotals()",
+    "ccsTypes": "src/lib/types/ccs.ts — CCSSnapshot, CCSPhase, CCSTask, GitCommit",
+    "platformTypes": "src/app.d.ts — KVNamespace, App.Platform with AI + KV_INVOICES bindings",
+    "settingsTypes": "src/lib/stores/settings.ts — AppSettings, AIProvidersSettings, IntegrationsSettings"
+  },
+  "securityNotes": [
+    "Settings stored in localStorage — personal single-user dashboard only",
+    "API keys (Anthropic, Asana, Shopify) are server-side env vars only",
+    "BYOK (user Anthropic key) transmitted in POST body — never logged",
+    "Browser cannot call api.anthropic.com directly due to CORS; all proxied via /api/anthropic/test"
+  ]
+}
